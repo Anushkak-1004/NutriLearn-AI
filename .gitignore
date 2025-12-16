@@ -1,0 +1,34 @@
+# Docker volumes and data
+docker-volumes/
+*.db
+*.sqlite
+postgres-data/
+
+# IDE configurations
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Secrets and environment files
+*.env
+!.env.example
+*.key
+*.pem
+secrets/
+.secrets
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

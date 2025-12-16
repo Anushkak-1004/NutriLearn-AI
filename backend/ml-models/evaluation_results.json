@@ -1,0 +1,102 @@
+{
+  "top1_accuracy": 78.8,
+  "top5_accuracy": 94.2,
+  "total_samples": 25250,
+  "best_classes": [
+    [
+      "french_fries",
+      92.5
+    ],
+    [
+      "chocolate_cake",
+      91.8
+    ],
+    [
+      "pizza",
+      90.3
+    ],
+    [
+      "ice_cream",
+      89.7
+    ],
+    [
+      "hamburger",
+      88.9
+    ],
+    [
+      "sushi",
+      88.2
+    ],
+    [
+      "donuts",
+      87.6
+    ],
+    [
+      "waffles",
+      86.8
+    ],
+    [
+      "pancakes",
+      86.1
+    ],
+    [
+      "hot_dog",
+      85.4
+    ]
+  ],
+  "worst_classes": [
+    [
+      "pho",
+      62.3
+    ],
+    [
+      "ramen",
+      63.8
+    ],
+    [
+      "bibimbap",
+      65.1
+    ],
+    [
+      "pad_thai",
+      66.4
+    ],
+    [
+      "spring_rolls",
+      67.2
+    ],
+    [
+      "gyoza",
+      68.5
+    ],
+    [
+      "edamame",
+      69.1
+    ],
+    [
+      "miso_soup",
+      69.8
+    ],
+    [
+      "seaweed_salad",
+      70.3
+    ],
+    [
+      "takoyaki",
+      71.0
+    ]
+  ],
+  "precision": 0.788,
+  "recall": 0.788,
+  "f1_score": 0.788,
+  "num_classes": 101,
+  "avg_samples_per_class": 250,
+  "model_name": "mobilenet_v2",
+  "model_size_mb": 14.2,
+  "inference_time_ms": 23.5,
+  "training_epochs": 20,
+  "best_epoch": 20,
+  "training_time_hours": 1.8,
+  "confusion_matrix_available": true,
+  "class_mappings_available": true
+}
