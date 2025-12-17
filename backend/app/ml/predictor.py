@@ -1,29 +1,22 @@
 """
 Food Recognition ML Predictor
-Simulates food recognition with mock data. Ready for PyTorch model integration.
+Simulates food recognition with mock data.
+
+TODO: Integrate trained PyTorch model here
+- Load model weights from ml-models/ directory
+- Implement preprocessing pipeline
+- Add inference logic
 """
 
 import random
 import logging
-import json
-from pathlib import Path
-from typing import Dict, Tuple, Optional
+from typing import Dict, Tuple
 from PIL import Image
 from datetime import datetime
 
 from ..models import FoodPrediction, NutritionInfo
 
 logger = logging.getLogger(__name__)
-
-# Try to import PyTorch (optional for development)
-try:
-    import torch
-    import torch.nn as nn
-    from torchvision import transforms, models
-    PYTORCH_AVAILABLE = True
-except ImportError:
-    PYTORCH_AVAILABLE = False
-    logger.warning("PyTorch not available. Using mock predictions.")
 
 
 # Mock food database with accurate nutrition data
@@ -124,19 +117,22 @@ MOCK_FOOD_DATABASE: Dict[str, Dict] = {
 }
 
 
-def simulate_food_recognition(image: Image.Image, use_real_model: bool = True) -> FoodPrediction:
+def simulate_food_recognition(image: Image.Image) -> FoodPrediction:
     """
-    Recognize food from an image using trained model or mock predictions.
+    Simulate food recognition with mock predictions.
+    
+    This function randomly selects a food item from the database and returns
+    a prediction with realistic confidence scores. It's designed for development
+    and testing before integrating a real ML model.
     
     Args:
-        image: PIL Image object of the food
-        use_real_model: Whether to use real PyTorch model (if available)
+        image: PIL Image object of the food (currently not used for prediction)
         
     Returns:
         FoodPrediction object with recognized food and nutrition info
         
     Raises:
-        ValueError: If image is invalid or cannot be processed
+        ValueError: If image is invalid
         
     Example:
         >>> from PIL import Image
@@ -144,86 +140,30 @@ def simulate_food_recognition(image: Image.Image, use_real_model: bool = True) -
         >>> prediction = simulate_food_recognition(img)
         >>> print(f"Detected: {prediction.food_name} ({prediction.confidence:.2%})")
     """
-    try:
-        # Validate image
-        if not isinstance(image, Image.Image):
-            raise ValueError("Input must be a PIL Image object")
-        
-        # Try to use real model if available
-        if use_real_model and PYTORCH_AVAILABLE and model is not None:
-            try:
-                # Preprocess image
-                input_tensor = preprocess_image(image, model_config)
-                
-                # Move to same device as model
-                device = next(model.parameters()).device
-                input_tensor = input_tensor.to(device)
-                
-                # Run inference
-                with torch.no_grad():
-                    outputs = model(input_tensor)
-                    probabilities = torch.nn.functional.softmax(outputs, dim=1)
-                    confidence, predicted_idx = torch.max(probabilities, 1)
-                
-                # Get predicted class name
-                idx_to_class = {v: k for k, v in class_mappings.items()}
-                predicted_class = idx_to_class[predicted_idx.item()]
-                confidence_score = confidence.item()
-                
-                logger.info(f"Model prediction: {predicted_class} (confidence: {confidence_score:.2%})")
-                
-                # Map to nutrition database (use mock data for now)
-                # TODO: Create comprehensive nutrition database for all Food-101 classes
-                food_data = MOCK_FOOD_DATABASE.get(
-                    predicted_class.lower().replace(" ", "_"),
-                    {
-                        "name": predicted_class.replace("_", " ").title(),
-                        "category": "unknown",
-                        "cuisine": "unknown",
-                        "nutrition": {"calories": 300, "protein": 10.0, "carbs": 40.0, "fat": 10.0, "fiber": 3.0}
-                    }
-                )
-                
-                # Create prediction object
-                prediction = FoodPrediction(
-                    food_name=food_data["name"],
-                    confidence=round(confidence_score, 3),
-                    nutrition=NutritionInfo(**food_data["nutrition"]),
-                    category=food_data.get("category", "unknown"),
-                    cuisine=food_data.get("cuisine", "unknown"),
-                    timestamp=datetime.utcnow()
-                )
-                
-                return prediction
-                
-            except Exception as e:
-                logger.warning(f"Model inference failed: {str(e)}. Falling back to mock predictions.")
-        
-        # Fallback to mock predictions
-        # For now, randomly select a food item
-        food_key = random.choice(list(MOCK_FOOD_DATABASE.keys()))
-        food_data = MOCK_FOOD_DATABASE[food_key]
-        
-        # Generate realistic confidence score (85-99%)
-        confidence = random.uniform(0.85, 0.99)
-        
-        logger.info(f"Mock prediction: {food_data['name']} (confidence: {confidence:.2%})")
-        
-        # Create prediction object
-        prediction = FoodPrediction(
-            food_name=food_data["name"],
-            confidence=round(confidence, 3),
-            nutrition=NutritionInfo(**food_data["nutrition"]),
-            category=food_data["category"],
-            cuisine=food_data["cuisine"],
-            timestamp=datetime.utcnow()
-        )
-        
-        return prediction
-        
-    except Exception as e:
-        logger.error(f"Error in food recognition: {str(e)}")
-        raise ValueError(f"Failed to process image: {str(e)}")
+    # Validate image input
+    if not isinstance(image, Image.Image):
+        raise ValueError("Input must be a PIL Image object")
+    
+    # Randomly select a food item from the database
+    food_key = random.choice(list(MOCK_FOOD_DATABASE.keys()))
+    food_data = MOCK_FOOD_DATABASE[food_key]
+    
+    # Generate realistic confidence score (85-99%)
+    confidence = random.uniform(0.85, 0.99)
+    
+    logger.info(f"Mock prediction: {food_data['name']} (confidence: {confidence:.2%})")
+    
+    # Create and return prediction object
+    prediction = FoodPrediction(
+        food_name=food_data["name"],
+        confidence=round(confidence, 3),
+        nutrition=NutritionInfo(**food_data["nutrition"]),
+        category=food_data["category"],
+        cuisine=food_data["cuisine"],
+        timestamp=datetime.utcnow()
+    )
+    
+    return prediction
 
 
 def get_food_by_name(food_name: str) -> Tuple[Dict, float]:
@@ -249,139 +189,6 @@ def get_food_by_name(food_name: str) -> Tuple[Dict, float]:
     raise ValueError(f"Food '{food_name}' not found in database")
 
 
-def load_model(
-    model_path: str = "./ml-models/food_model_v1.pth",
-    config_path: str = "./ml-models/model_config.json",
-    class_mapping_path: str = "./ml-models/class_to_idx.json"
-) -> Tuple[Optional[nn.Module], Optional[Dict], Optional[Dict]]:
-    """
-    Load the PyTorch model for food recognition.
-    
-    Args:
-        model_path: Path to trained model weights
-        config_path: Path to model configuration
-        class_mapping_path: Path to class mappings
-        
-    Returns:
-        Tuple of (model, config, class_to_idx) or (None, None, None) if loading fails
-    """
-    if not PYTORCH_AVAILABLE:
-        logger.warning("PyTorch not available. Using mock predictions.")
-        return None, None, None
-    
-    try:
-        # Check if model files exist
-        model_path = Path(model_path)
-        config_path = Path(config_path)
-        class_mapping_path = Path(class_mapping_path)
-        
-        if not model_path.exists():
-            logger.warning(f"Model file not found: {model_path}. Using mock predictions.")
-            return None, None, None
-        
-        if not config_path.exists():
-            logger.warning(f"Config file not found: {config_path}. Using mock predictions.")
-            return None, None, None
-        
-        if not class_mapping_path.exists():
-            logger.warning(f"Class mapping file not found: {class_mapping_path}. Using mock predictions.")
-            return None, None, None
-        
-        # Load configuration
-        with open(config_path, 'r') as f:
-            config = json.load(f)
-        
-        # Load class mappings
-        with open(class_mapping_path, 'r') as f:
-            class_to_idx = json.load(f)
-        
-        # Determine device
-        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        
-        # Build model architecture
-        model_name = config.get('model_name', 'mobilenet_v2')
-        num_classes = config.get('num_classes', 101)
-        
-        if model_name == "mobilenet_v2":
-            model = models.mobilenet_v2(pretrained=False)
-            model.classifier = nn.Sequential(
-                nn.Dropout(0.2),
-                nn.Linear(model.last_channel, num_classes)
-            )
-        elif model_name == "efficientnet_b0":
-            model = models.efficientnet_b0(pretrained=False)
-            num_features = 1280
-            model.classifier = nn.Sequential(
-                nn.Dropout(0.2),
-                nn.Linear(num_features, num_classes)
-            )
-        elif model_name == "resnet50":
-            model = models.resnet50(pretrained=False)
-            num_features = model.fc.in_features
-            model.fc = nn.Linear(num_features, num_classes)
-        else:
-            logger.error(f"Unknown model architecture: {model_name}")
-            return None, None, None
-        
-        # Load trained weights
-        model.load_state_dict(torch.load(model_path, map_location=device))
-        model = model.to(device)
-        model.eval()
-        
-        logger.info(f"Successfully loaded {model_name} model from {model_path}")
-        logger.info(f"Model device: {device}")
-        logger.info(f"Number of classes: {num_classes}")
-        
-        return model, config, class_to_idx
-        
-    except Exception as e:
-        logger.error(f"Failed to load model: {str(e)}")
-        logger.warning("Falling back to mock predictions")
-        return None, None, None
-
-
-def preprocess_image(image: Image.Image, config: Optional[Dict] = None) -> torch.Tensor:
-    """
-    Preprocess image for model input.
-    
-    Args:
-        image: Input PIL Image
-        config: Model configuration with preprocessing parameters
-        
-    Returns:
-        Preprocessed image tensor ready for model
-    """
-    if not PYTORCH_AVAILABLE:
-        return image
-    
-    # Convert to RGB if needed
-    if image.mode != 'RGB':
-        image = image.convert('RGB')
-    
-    # Get preprocessing parameters from config
-    if config:
-        mean = config.get('mean', [0.485, 0.456, 0.406])
-        std = config.get('std', [0.229, 0.224, 0.225])
-        input_size = config.get('input_size', 224)
-    else:
-        mean = [0.485, 0.456, 0.406]
-        std = [0.229, 0.224, 0.225]
-        input_size = 224
-    
-    # Create preprocessing pipeline
-    transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(input_size),
-        transforms.ToTensor(),
-        transforms.Normalize(mean=mean, std=std)
-    ])
-    
-    # Apply transformations and add batch dimension
-    tensor = transform(image).unsqueeze(0)
-    
-    return tensor
-
-
 def get_available_foods() -> list:
     """
     Get list of all available foods in the database.
@@ -392,10 +199,17 @@ def get_available_foods() -> list:
     return [data["name"] for data in MOCK_FOOD_DATABASE.values()]
 
 
-# Model instance (loaded on startup)
-model, model_config, class_mappings = load_model()
-
-if model is not None:
-    logger.info("✓ Trained PyTorch model loaded successfully")
-else:
+def load_model():
+    """
+    Placeholder for model loading.
+    
+    TODO: Implement PyTorch model loading here
+    - Load model weights from ml-models/ directory
+    - Initialize model architecture
+    - Return model instance
+    
+    Returns:
+        None (mock mode - no model to load)
+    """
     logger.info("✓ Using mock predictions (train model with: python train_model.py)")
+    return None

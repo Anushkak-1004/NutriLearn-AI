@@ -12,12 +12,28 @@ MLOps Concepts:
 import logging
 from datetime import datetime
 from typing import Dict, List, Optional, Any
-import mlflow
-from mlflow.entities import Run
-
-from .mlflow_config import get_mlflow_client, get_experiment_id
 
 logger = logging.getLogger(__name__)
+
+# Check if MLflow is available
+def is_mlflow_enabled() -> bool:
+    """Check if MLflow is enabled in the application."""
+    try:
+        from ..main import MLFLOW_ENABLED
+        return MLFLOW_ENABLED
+    except (ImportError, AttributeError):
+        return False
+
+
+def _safe_mlflow_import():
+    """Safely import MLflow components."""
+    try:
+        import mlflow
+        from mlflow.entities import Run
+        from .mlflow_config import get_mlflow_client, get_experiment_id
+        return mlflow, Run, get_mlflow_client, get_experiment_id
+    except ImportError:
+        return None, None, None, None
 
 
 def log_prediction(
@@ -49,7 +65,16 @@ def log_prediction(
     - Understanding user behavior
     - Debugging issues
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, skipping prediction logging")
+        return None
+    
     try:
+        mlflow, _, _, _ = _safe_mlflow_import()
+        if not mlflow:
+            return None
+        
         timestamp = timestamp or datetime.utcnow()
         
         with mlflow.start_run(run_name=f"prediction_{timestamp.strftime('%Y%m%d_%H%M%S')}"):
@@ -77,7 +102,7 @@ def log_prediction(
             return run_id
             
     except Exception as e:
-        logger.error(f"Failed to log prediction: {str(e)}")
+        logger.debug(f"Failed to log prediction: {str(e)}")
         return None
 
 
@@ -108,7 +133,16 @@ def log_model_metrics(
     - Recall: % of actual positives that were identified
     - F1: Harmonic mean of precision and recall
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, skipping model metrics logging")
+        return None
+    
     try:
+        mlflow, _, _, _ = _safe_mlflow_import()
+        if not mlflow:
+            return None
+        
         with mlflow.start_run(run_name=f"model_evaluation_{model_version}"):
             # Log metrics
             mlflow.log_metric("accuracy", accuracy)
@@ -131,7 +165,7 @@ def log_model_metrics(
             return run_id
             
     except Exception as e:
-        logger.error(f"Failed to log model metrics: {str(e)}")
+        logger.debug(f"Failed to log model metrics: {str(e)}")
         return None
 
 
@@ -151,7 +185,16 @@ def log_parameters(model_config: Dict[str, Any]) -> Optional[str]:
     - Comparison: Compare different hyperparameter settings
     - Debugging: Understand what configuration produced results
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, skipping parameters logging")
+        return None
+    
     try:
+        mlflow, _, _, _ = _safe_mlflow_import()
+        if not mlflow:
+            return None
+        
         with mlflow.start_run(run_name="model_configuration"):
             # Log all parameters
             for key, value in model_config.items():
@@ -167,7 +210,7 @@ def log_parameters(model_config: Dict[str, Any]) -> Optional[str]:
             return run_id
             
     except Exception as e:
-        logger.error(f"Failed to log parameters: {str(e)}")
+        logger.debug(f"Failed to log parameters: {str(e)}")
         return None
 
 
@@ -188,7 +231,16 @@ def compare_models(model_v1_run_id: str, model_v2_run_id: str) -> Dict[str, Any]
     - Whether new model is better than current
     - Trade-offs between different metrics
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, skipping model comparison")
+        return {}
+    
     try:
+        _, _, get_mlflow_client, _ = _safe_mlflow_import()
+        if not get_mlflow_client:
+            return {}
+        
         client = get_mlflow_client()
         
         # Get runs
@@ -223,11 +275,11 @@ def compare_models(model_v1_run_id: str, model_v2_run_id: str) -> Dict[str, Any]
         return comparison
         
     except Exception as e:
-        logger.error(f"Failed to compare models: {str(e)}")
+        logger.debug(f"Failed to compare models: {str(e)}")
         return {}
 
 
-def get_experiment_runs(limit: int = 10, run_type: str = None) -> List[Run]:
+def get_experiment_runs(limit: int = 10, run_type: str = None) -> List:
     """
     Retrieve recent experiment runs.
     
@@ -244,7 +296,16 @@ def get_experiment_runs(limit: int = 10, run_type: str = None) -> List[Run]:
     - Performance monitoring
     - Trend analysis
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, returning empty runs list")
+        return []
+    
     try:
+        _, _, get_mlflow_client, get_experiment_id = _safe_mlflow_import()
+        if not get_mlflow_client or not get_experiment_id:
+            return []
+        
         client = get_mlflow_client()
         experiment_id = get_experiment_id()
         
@@ -266,7 +327,7 @@ def get_experiment_runs(limit: int = 10, run_type: str = None) -> List[Run]:
         return runs
         
     except Exception as e:
-        logger.error(f"Failed to get experiment runs: {str(e)}")
+        logger.debug(f"Failed to get experiment runs: {str(e)}")
         return []
 
 
@@ -287,6 +348,11 @@ def get_metrics_history(metric_name: str, limit: int = 100) -> List[Dict[str, An
     - Model degradation
     - Impact of changes
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, returning empty metrics history")
+        return []
+    
     try:
         runs = get_experiment_runs(limit=limit)
         
@@ -307,7 +373,7 @@ def get_metrics_history(metric_name: str, limit: int = 100) -> List[Dict[str, An
         return history
         
     except Exception as e:
-        logger.error(f"Failed to get metrics history: {str(e)}")
+        logger.debug(f"Failed to get metrics history: {str(e)}")
         return []
 
 
@@ -324,6 +390,16 @@ def get_prediction_statistics() -> Dict[str, Any]:
     - Average confidence scores
     - Most predicted foods
     """
+    # Skip if MLflow is not enabled
+    if not is_mlflow_enabled():
+        logger.debug("MLflow not enabled, returning empty statistics")
+        return {
+            "total_predictions": 0,
+            "avg_confidence": 0,
+            "food_distribution": {},
+            "mlflow_enabled": False
+        }
+    
     try:
         runs = get_experiment_runs(limit=1000, run_type="prediction")
         
@@ -331,7 +407,8 @@ def get_prediction_statistics() -> Dict[str, Any]:
             return {
                 "total_predictions": 0,
                 "avg_confidence": 0,
-                "food_distribution": {}
+                "food_distribution": {},
+                "mlflow_enabled": True
             }
         
         confidences = []
@@ -353,7 +430,8 @@ def get_prediction_statistics() -> Dict[str, Any]:
             "min_confidence": min(confidences) if confidences else 0,
             "max_confidence": max(confidences) if confidences else 0,
             "food_distribution": foods,
-            "unique_foods": len(foods)
+            "unique_foods": len(foods),
+            "mlflow_enabled": True
         }
         
         logger.info(f"Calculated prediction statistics: {stats['total_predictions']} predictions")
@@ -361,5 +439,11 @@ def get_prediction_statistics() -> Dict[str, Any]:
         return stats
         
     except Exception as e:
-        logger.error(f"Failed to get prediction statistics: {str(e)}")
-        return {}
+        logger.debug(f"Failed to get prediction statistics: {str(e)}")
+        return {
+            "total_predictions": 0,
+            "avg_confidence": 0,
+            "food_distribution": {},
+            "mlflow_enabled": True,
+            "error": str(e)
+        }

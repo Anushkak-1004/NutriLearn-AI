@@ -14,10 +14,37 @@ const api = axios.create({
   timeout: 30000, // 30 seconds
 });
 
-// Request interceptor for logging
+/**
+ * Set or clear authentication token in Axios default headers
+ * @param {string|null} token - JWT token to set, or null to clear
+ */
+export function setAuthToken(token) {
+  if (token) {
+    api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common['Authorization'];
+  }
+}
+
+/**
+ * Initialize authentication on app load
+ * Retrieves token from localStorage and configures Axios
+ */
+export function initializeAuth() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    setAuthToken(token);
+  }
+}
+
+// Request interceptor - ensures token is always included
 api.interceptors.request.use(
   (config) => {
     console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
+    const token = localStorage.getItem('token');
+    if (token && !config.headers['Authorization']) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -26,7 +53,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor - handles 401 errors globally
 api.interceptors.response.use(
   (response) => {
     console.log(`API Response: ${response.status} ${response.config.url}`);
@@ -34,6 +61,18 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Response Error:', error.response?.data || error.message);
+    
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      localStorage.removeItem('token');
+      setAuthToken(null);
+      
+      // Redirect to login if not already there
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );

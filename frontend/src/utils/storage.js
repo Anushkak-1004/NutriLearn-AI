@@ -25,6 +25,11 @@ function generateUUID() {
 
 /**
  * Get or create user ID
+ * @deprecated This function is deprecated for authentication purposes.
+ * Authentication now uses JWT tokens. However, this function is still
+ * temporarily needed for API calls that require explicit userId parameters
+ * until the backend is fully migrated to extract user_id from JWT tokens.
+ * 
  * @returns {string} User ID
  */
 export function getUserId() {

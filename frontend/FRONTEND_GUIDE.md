@@ -445,9 +445,289 @@ Remember:
 - [Vite](https://vitejs.dev/)
 - [Axios](https://axios-http.com/)
 
+## 🔐 Authentication
+
+### Overview
+
+The frontend implements JWT-based authentication that integrates with the backend API. Users can sign up, log in, log out, and access protected routes. Authentication state is managed using localStorage and Axios interceptors.
+
+### Authentication Flow
+
+**Signup Flow:**
+```
+User fills form → Validate input → POST /api/v1/auth/signup →
+Backend creates user → Returns JWT → Store in localStorage →
+Update Axios headers → Redirect to /dashboard
+```
+
+**Login Flow:**
+```
+User fills form → POST /api/v1/auth/login →
+Backend validates credentials → Returns JWT → Store in localStorage →
+Update Axios headers → Redirect to /dashboard
+```
+
+**Logout Flow:**
+```
+User clicks logout → Remove token from localStorage →
+Clear Axios headers → Redirect to home page
+```
+
+**Protected Route Access:**
+```
+User navigates to protected route → Check isAuthenticated() →
+If token exists → Render page → API calls include Bearer token →
+If no token → Redirect to /login
+```
+
+### Authentication Components
+
+#### LoginPage (`/login`)
+
+**Features:**
+- Email and password input fields
+- Form validation (required fields)
+- Loading state during authentication
+- Error message display
+- Link to signup page
+
+**User Flow:**
+1. Enter email and password
+2. Click "Login" button
+3. View loading state
+4. On success: Redirect to dashboard
+5. On error: Display error message
+
+#### SignupPage (`/signup`)
+
+**Features:**
+- Email, password, and confirm password fields
+- Client-side validation:
+  - Password minimum 8 characters
+  - Passwords must match
+- Loading state during registration
+- Error message display
+- Link to login page
+
+**User Flow:**
+1. Enter email, password, and confirm password
+2. Client validates password length and match
+3. Click "Sign Up" button
+4. View loading state
+5. On success: Redirect to dashboard
+6. On error: Display error message
+
+#### ProtectedRoute Component
+
+**Purpose:** Wrapper component that protects routes requiring authentication
+
+**Usage:**
+```javascript
+<Route
+  path="/dashboard"
+  element={
+    <ProtectedRoute>
+      <DashboardPage />
+    </ProtectedRoute>
+  }
+/>
+```
+
+**Behavior:**
+- Checks if user is authenticated using `isAuthenticated()`
+- If authenticated: Renders child components
+- If not authenticated: Redirects to `/login` with `replace` prop
+
+### Authentication Utilities
+
+#### auth.js
+
+Centralized authentication functions:
+
+```javascript
+// Register new user
+await signup(email, password);
+
+// Authenticate user
+await login(email, password);
+
+// Log out user
+logout();
+
+// Get stored token
+const token = getToken();
+
+// Check authentication status
+const isAuth = isAuthenticated();
+```
+
+**Key Functions:**
+
+- `signup(email, password)` - Creates account, stores token, updates headers
+- `login(email, password)` - Authenticates user, stores token, updates headers
+- `logout()` - Removes token, clears headers
+- `getToken()` - Retrieves JWT from localStorage
+- `isAuthenticated()` - Returns true if valid token exists
+
+#### API Integration
+
+**Token Management:**
+
+The API client automatically handles authentication tokens:
+
+```javascript
+// Set or clear token in Axios headers
+setAuthToken(token);
+
+// Initialize auth on app load
+initializeAuth();
+```
+
+**Request Interceptor:**
+- Automatically includes JWT token in Authorization header
+- Format: `Authorization: Bearer <token>`
+- Applied to all API requests
+
+**Response Interceptor:**
+- Catches 401 Unauthorized responses
+- Automatically removes invalid/expired tokens
+- Redirects to login page
+- Prevents manual error handling in components
+
+### Protected Routes
+
+The following routes require authentication:
+- `/dashboard` - User dashboard
+- `/analyze` - Food analysis
+- `/learning/:moduleId` - Learning modules
+- `/mlops` - MLOps dashboard
+
+Public routes (no authentication required):
+- `/` - Home page
+- `/login` - Login page
+- `/signup` - Signup page
+
+### Navigation Updates
+
+The navigation menu dynamically updates based on authentication state:
+
+**When Not Authenticated:**
+- Shows: "Login" and "Sign Up" buttons
+- Hides: Protected route links, Points badge, Logout button
+
+**When Authenticated:**
+- Shows: Protected route links (Dashboard, Analyze, Learning, MLOps)
+- Shows: Points badge, Logout button
+- Hides: Login and Sign Up buttons
+
+### localStorage Structure
+
+**Token Storage:**
+```javascript
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Key:** `token`
+**Value:** JWT string
+
+### Authentication Persistence
+
+**Page Refresh:**
+- Token is retrieved from localStorage on app initialization
+- Axios headers are configured with stored token
+- User remains authenticated across page refreshes
+- Protected routes remain accessible
+
+**Token Expiration:**
+- Backend validates token on each request
+- Expired tokens return 401 Unauthorized
+- Frontend automatically logs out user
+- User is redirected to login page
+
+### Error Handling
+
+**Client-Side Validation Errors:**
+- Password too short (< 8 characters)
+- Passwords don't match
+- Invalid email format
+
+**API Error Responses:**
+- 401 Unauthorized - Invalid credentials or expired token
+- 400 Bad Request - Duplicate email during signup
+- 422 Unprocessable Entity - Validation errors
+- Network errors - Connection issues
+
+**Error Display:**
+All errors are displayed in a consistent error banner:
+```javascript
+{error && (
+  <div className="bg-red-50 text-red-600 p-3 rounded border border-red-200">
+    {error}
+  </div>
+)}
+```
+
+### Security Considerations
+
+**Token Storage:**
+- JWT tokens stored in localStorage
+- Vulnerable to XSS attacks (mitigated by React's built-in XSS protection)
+- Should only be used over HTTPS in production
+- Tokens have reasonable expiration (7 days)
+
+**Best Practices:**
+- Never commit tokens to version control
+- Use environment variables for API URLs
+- Validate all inputs on client and server
+- Use HTTPS in production
+- Implement rate limiting on backend
+- Clear tokens on logout
+
+### Troubleshooting
+
+**Issue: User not redirected after login**
+- Check that `navigate('/dashboard')` is called after successful login
+- Verify no errors in browser console
+- Ensure token is stored in localStorage
+
+**Issue: Protected routes not working**
+- Verify `ProtectedRoute` component is wrapping protected routes
+- Check that `isAuthenticated()` returns correct value
+- Ensure token exists in localStorage
+
+**Issue: API requests return 401**
+- Check that token is included in Authorization header
+- Verify token hasn't expired
+- Ensure `initializeAuth()` is called on app mount
+- Check Axios interceptors are configured
+
+**Issue: Token not persisting across page refresh**
+- Verify `initializeAuth()` is called in `App.jsx` useEffect
+- Check that token is stored in localStorage (not sessionStorage)
+- Ensure no code is clearing localStorage on mount
+
+**Issue: Navigation menu not updating**
+- Verify `isAuthenticated()` is being called in Navigation component
+- Check that component re-renders when auth state changes
+- Ensure logout function is properly clearing token
+
+### Testing Authentication
+
+See `AUTHENTICATION_TESTING_GUIDE.md` for comprehensive manual testing instructions.
+
+**Quick Test:**
+1. Sign up with new account
+2. Verify redirect to dashboard
+3. Refresh page - should stay logged in
+4. Log out - should redirect to home
+5. Try accessing `/dashboard` - should redirect to login
+6. Log in - should redirect to dashboard
+
 ## 🎓 Next Steps
 
-1. Add user authentication
+1. ~~Add user authentication~~ ✅ Completed
 2. Implement offline support
 3. Add push notifications
 4. Create mobile app (React Native)
@@ -455,6 +735,10 @@ Remember:
 6. Implement meal planning
 7. Add barcode scanning
 8. Create recipe suggestions
+9. Add password reset functionality
+10. Implement email verification
+11. Add two-factor authentication
+12. Create user profile settings
 
 ---
 

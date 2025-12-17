@@ -1,0 +1,17 @@
+{
+  "model_name": "mobilenet_v2",
+  "num_classes": 101,
+  "input_size": 224,
+  "mean": [
+    0.485,
+    0.456,
+    0.406
+  ],
+  "std": [
+    0.229,
+    0.224,
+    0.225
+  ],
+  "best_val_acc": 70.51485148514851,
+  "training_time": 7452.262402772903
+}

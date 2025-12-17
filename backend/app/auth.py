@@ -50,10 +50,11 @@ def generate_token(user_id: str, expires_delta: Optional[timedelta] = None) -> s
         >>> print(token)
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'
     """
+    # Use custom expiration if provided, otherwise use default
     if expires_delta is None:
         expires_delta = timedelta(days=ACCESS_TOKEN_EXPIRE_DAYS)
     
-    # Calculate expiration time
+    # Calculate expiration time using the provided or default expires_delta
     expire = datetime.utcnow() + expires_delta
     
     # Create token payload
@@ -110,7 +111,8 @@ def get_password_hash(password: str) -> str:
         '$2b$12$KIXxJ...'
     """
     # Convert password to bytes and hash with bcrypt
-    password_bytes = password.encode('utf-8')
+    # Bcrypt has a 72-byte limit, so truncate if necessary
+    password_bytes = password.encode('utf-8')[:72]
     salt = bcrypt.gensalt()
     hashed = bcrypt.hashpw(password_bytes, salt)
     # Return as string for storage
@@ -134,6 +136,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         True
     """
     # Convert both to bytes for bcrypt verification
-    password_bytes = plain_password.encode('utf-8')
+    # Bcrypt has a 72-byte limit, so truncate if necessary
+    password_bytes = plain_password.encode('utf-8')[:72]
     hashed_bytes = hashed_password.encode('utf-8')
     return bcrypt.checkpw(password_bytes, hashed_bytes)

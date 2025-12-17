@@ -262,7 +262,9 @@
   - Document how to run authentication tests
   - _Requirements: All_
 
-- [-] 16. Final checkpoint - Ensure all tests pass
+- [x] 16. Final checkpoint - Ensure all tests pass
+
+
 
 
 

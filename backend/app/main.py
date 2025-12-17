@@ -15,7 +15,6 @@ import logging
 from .api.routes import router
 from .api.mlops_routes import router as mlops_router
 from .api.auth_routes import router as auth_router
-from .ml.predictor import load_model
 from .database import init_supabase_client
 from .mlops.mlflow_config import initialize_mlflow, get_tracking_uri
 
@@ -25,6 +24,9 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Global flag for MLflow availability
+MLFLOW_ENABLED = False
 
 # Initialize FastAPI application
 app = FastAPI(
@@ -125,14 +127,8 @@ async def startup_event():
     logger.info(f"Python version: {sys.version}")
     logger.info(f"Platform: {platform.platform()}")
     
-    # Initialize ML model
-    logger.info("Loading ML model...")
-    try:
-        global model
-        model = load_model()
-        logger.info("✓ ML model loaded successfully (using mock predictions)")
-    except Exception as e:
-        logger.error(f"✗ Failed to load ML model: {str(e)}")
+    # ML Model Status
+    logger.info("✓ Using mock predictions for food recognition")
     
     # Initialize database
     logger.info("Initializing database connection...")
@@ -145,18 +141,21 @@ async def startup_event():
     except Exception as e:
         logger.error(f"✗ Database initialization failed: {str(e)}")
     
-    # Initialize MLflow
+    # Initialize MLflow (optional)
+    global MLFLOW_ENABLED
     logger.info("Initializing MLflow experiment tracking...")
     try:
         experiment_id = initialize_mlflow()
         tracking_uri = get_tracking_uri()
+        MLFLOW_ENABLED = True
         logger.info(f"✓ MLflow initialized successfully")
         logger.info(f"  Experiment ID: {experiment_id}")
         logger.info(f"  Tracking URI: {tracking_uri}")
         logger.info(f"  MLflow UI: Run 'mlflow ui' and visit http://localhost:5000")
     except Exception as e:
-        logger.error(f"✗ MLflow initialization failed: {str(e)}")
-        logger.warning("  Continuing without MLflow tracking")
+        MLFLOW_ENABLED = False
+        logger.warning(f"⚠ MLflow not available: {str(e)}")
+        logger.info("  Continuing without MLflow tracking (app will work normally)")
     
     logger.info("=" * 60)
     logger.info("NutriLearn AI Backend is ready!")
