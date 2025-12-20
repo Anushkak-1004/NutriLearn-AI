@@ -33,7 +33,6 @@ pytest-asyncio==0.21.1
 httpx>=0.28.0
 hypothesis>=6.92.0
 websockets>=15.0
-hypothesis>=6.92.0
 
 # Data Science
 numpy>=1.24.0
