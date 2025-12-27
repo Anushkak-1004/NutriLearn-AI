@@ -1,11 +1,14 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Brain, Award } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Brain, Award, LogOut, User } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { getUserStats } from '../utils/api';
 import { getUserId } from '../utils/storage';
 
 function Navigation() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [points, setPoints] = useState(0);
   const userId = getUserId();
 
@@ -28,6 +31,11 @@ function Navigation() {
 
   const isActive = (path) => {
     return location.pathname === path;
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   return (
@@ -76,11 +84,41 @@ function Navigation() {
             </Link>
           </div>
 
-          {/* Points Badge */}
-          <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-4 py-2 rounded-full shadow-lg">
-            <Award className="w-5 h-5" />
-            <span className="font-bold">{points}</span>
-            <span className="text-sm">pts</span>
+          {/* Right Side - Points, User, Logout */}
+          <div className="flex items-center space-x-4">
+            {/* Points Badge */}
+            <div className="flex items-center space-x-2 bg-gradient-to-r from-amber-400 to-orange-500 text-white px-4 py-2 rounded-full shadow-lg">
+              <Award className="w-5 h-5" />
+              <span className="font-bold">{points}</span>
+              <span className="text-sm">pts</span>
+            </div>
+
+            {/* User Info & Logout (Desktop) */}
+            <div className="hidden md:flex items-center space-x-3">
+              {user && (
+                <div className="flex items-center space-x-2 text-sm text-gray-700">
+                  <User className="w-4 h-4 text-gray-500" />
+                  <span className="font-medium">{user.full_name || user.email}</span>
+                </div>
+              )}
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-4 py-2 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                title="Logout"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Logout</span>
+              </button>
+            </div>
+
+            {/* Logout Icon (Mobile) */}
+            <button
+              onClick={handleLogout}
+              className="md:hidden flex items-center justify-center p-2 text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+              title="Logout"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </div>

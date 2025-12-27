@@ -14,9 +14,15 @@ const api = axios.create({
   timeout: 30000, // 30 seconds
 });
 
-// Request interceptor for logging
+// Request interceptor - Add auth token and logging
 api.interceptors.request.use(
   (config) => {
+    // Add auth token if available
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    
     console.log(`API Request: ${config.method.toUpperCase()} ${config.url}`);
     return config;
   },
@@ -26,7 +32,7 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor - Handle 401 and error handling
 api.interceptors.response.use(
   (response) => {
     console.log(`API Response: ${response.status} ${response.config.url}`);
@@ -34,6 +40,19 @@ api.interceptors.response.use(
   },
   (error) => {
     console.error('API Response Error:', error.response?.data || error.message);
+    
+    // Handle 401 Unauthorized - token expired or invalid
+    if (error.response?.status === 401) {
+      // Clear auth data
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      
+      // Redirect to login if not already there
+      if (!window.location.pathname.startsWith('/login')) {
+        window.location.href = '/login';
+      }
+    }
+    
     return Promise.reject(error);
   }
 );
